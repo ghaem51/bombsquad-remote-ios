@@ -9,7 +9,7 @@
   self.center = CGPointMake(self.center.x, self.center.y + slideDist);
   [UIView animateWithDuration:0.25
                         delay:0
-                      options:nil
+                      options:0
                    animations:^{
                      self.center =
                          CGPointMake(self.center.x, self.center.y - slideDist);
@@ -23,7 +23,7 @@
                     (self.center.y - self.bounds.size.height * 0.5);
   [UIView animateWithDuration:0.25
       delay:0
-      options:nil
+      options:0
       animations:^{
         self.center = CGPointMake(self.center.x, self.center.y + slideDist);
       }
@@ -38,7 +38,7 @@
   self.center = CGPointMake(self.center.x, self.center.y - slideDist);
   [UIView animateWithDuration:0.25
                         delay:0
-                      options:nil
+                      options:0
                    animations:^{
                      self.center =
                          CGPointMake(self.center.x, self.center.y + slideDist);
@@ -51,7 +51,7 @@
   float slideDist = self.center.y + self.bounds.size.height * 0.5;
   [UIView animateWithDuration:0.25
       delay:0
-      options:nil
+      options:0
       animations:^{
         self.center = CGPointMake(self.center.x, self.center.y - slideDist);
       }

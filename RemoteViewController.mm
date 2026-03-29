@@ -7,7 +7,29 @@
 #include <iostream>
 #include <netdb.h>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
+
 using namespace std;
+
+static UIInterfaceOrientationMask BSRemoteSupportedOrientations(void) {
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    return UIInterfaceOrientationMaskAll;
+  }
+  return UIInterfaceOrientationMaskLandscape;
+}
+
+static UIInterfaceOrientation BSRemoteCurrentInterfaceOrientation(
+    UIViewController *viewController) {
+  if (@available(iOS 13.0, *)) {
+    UIWindowScene *windowScene = viewController.view.window.windowScene;
+    if (windowScene != nil) {
+      return windowScene.interfaceOrientation;
+    }
+  }
+  return [UIApplication sharedApplication].statusBarOrientation;
+}
 
 RemoteViewController *gRemoteViewController = nil;
 
@@ -331,7 +353,7 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 
     // only send to the addresses matching the family of the socket we made...
     struct sockaddr *sa = (sockaddr *)&_addresses[i];
-    UInt8 data[5 + nameLen];
+    vector<UInt8> data(5 + nameLen);
     data[0] = BS_REMOTE_MSG_ID_REQUEST;
 
     // old protocol version - cant really change this cleanly without breaking
@@ -344,7 +366,7 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     // means we want version 2 (yes, it's ugly; i know)
     data[4] = 50;
 
-    strncpy((char *)data + 5, buffer, nameLen);
+    strncpy(reinterpret_cast<char *>(data.data()) + 5, buffer, nameLen);
     int s;
     if (sa->sa_family == AF_INET6) {
       s = _socket6;
@@ -355,7 +377,8 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     }
 
     int err = static_cast<int>(sendto(
-        s, data, 5 + nameLen, 0, (sockaddr *)&_addresses[i], _addressSizes[i]));
+        s, data.data(), 5 + nameLen, 0, (sockaddr *)&_addresses[i],
+        _addressSizes[i]));
     if (err == -1)
       NSLog(@"ERROR %d on sendto for %d\n", errno, i);
   }
@@ -382,7 +405,8 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 
     // fire off another disconnect notice
     if (_id != -1) {
-      UInt8 data[2] = {BS_REMOTE_MSG_DISCONNECT, _id};
+      UInt8 data[2] = {static_cast<UInt8>(BS_REMOTE_MSG_DISCONNECT),
+                       static_cast<UInt8>(_id)};
       if (_haveV4) {
         send(_socket4, data, sizeof(data), 0);
       }
@@ -607,15 +631,11 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     data[3] = s; // starting index
 
     // pack em in
-    int retransmitCount = 0;
     UInt8 *val = (UInt8 *)(data + 4);
     for (int i = 0; i < statesToSend; i++) {
       val[0] = _statesV2[s] & 0xFF;
       val[1] = (_statesV2[s] >> 8) & 0xFF;
       val[2] = (_statesV2[s] >> 16) & 0xFF;
-      if (_stateLastSentTimes[s] != 0.0) {
-        retransmitCount++;
-      }
       _stateLastSentTimes[s] = curTime;
       s++;
       val += 3;
@@ -661,13 +681,9 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     data[3] = s; // starting index
 
     // pack em in
-    int retransmitCount = 0;
     UInt16 *val = (UInt16 *)(data + 4);
     for (int i = 0; i < statesToSend; i++) {
       *val = _statesV1[s];
-      if (_stateLastSentTimes[s] != 0.0) {
-        retransmitCount++;
-      }
       _stateLastSentTimes[s] = curTime;
       s++;
       val++;
@@ -1338,35 +1354,19 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   [super didReceiveMemoryWarning];
 }
 
-- (void)viewDidUnload {
-  [super viewDidUnload];
-  // Release any retained subviews of the main view.
-  self.buttonBacking = nil;
-  self.buttonImageJump = nil;
-  self.buttonImageJumpPressed = nil;
-  self.buttonImageThrow = nil;
-  self.buttonImageThrowPressed = nil;
-  self.buttonImagePunch = nil;
-  self.buttonImagePunchPressed = nil;
-  self.buttonImageBomb = nil;
-  self.buttonImageBombPressed = nil;
-  self.dPadBacking = nil;
-  self.dPadThumbImage = nil;
-  self.dPadThumbPressedImage = nil;
-  self.dPadCenterImage = nil;
-  self.bgImage = nil;
-  self.activityIndicator = nil;
+- (BOOL)shouldAutorotate {
+  return YES;
 }
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:
-    (UIInterfaceOrientation)interfaceOrientationIn {
-  // iPad works any which way.. iPhone only landscape
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+  return BSRemoteSupportedOrientations();
+}
+
+- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation {
   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-    return YES;
-  } else {
-    return (interfaceOrientationIn == UIInterfaceOrientationLandscapeLeft ||
-            interfaceOrientationIn == UIInterfaceOrientationLandscapeRight);
+    return UIInterfaceOrientationPortrait;
   }
+  return UIInterfaceOrientationLandscapeRight;
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -1449,7 +1449,8 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   // shoot off a disconnect immediately.. (subsequent attempts will happen in
   // process())
   if (_id != -1) {
-    UInt8 data[2] = {BS_REMOTE_MSG_DISCONNECT, _id};
+    UInt8 data[2] = {static_cast<UInt8>(BS_REMOTE_MSG_DISCONNECT),
+                     static_cast<UInt8>(_id)};
 
     if (_haveV4) {
       send(_socket4, data, sizeof(data), 0);
@@ -1470,7 +1471,8 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   // our character (if they don't get it they'll have to wait for us to
   // time-out)
   if (_id != -1) {
-    UInt8 data[2] = {BS_REMOTE_MSG_DISCONNECT, _id};
+    UInt8 data[2] = {static_cast<UInt8>(BS_REMOTE_MSG_DISCONNECT),
+                     static_cast<UInt8>(_id)};
 
     if (_haveV4) {
       send(_socket4, data, sizeof(data), 0);
@@ -2039,7 +2041,7 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   float rawY;
   float rawZ;
 
-  switch (self.interfaceOrientation) {
+  switch (BSRemoteCurrentInterfaceOrientation(self)) {
   case UIInterfaceOrientationPortrait:
     rawX = acceleration.x;
     rawY = acceleration.y;
@@ -2143,6 +2145,8 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 }
 
 @end
+
+#pragma clang diagnostic pop
 
 #pragma mark -
 @implementation RemoteViewController (NSStreamDelegate)

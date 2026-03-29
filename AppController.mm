@@ -4,9 +4,18 @@
 #import "RemoteViewController.h"
 #import "UIViewUtilities.h"
 #import <GameController/GCController.h>
+#import <GameController/GCControllerButtonInput.h>
+#import <GameController/GCControllerDirectionPad.h>
+#import <GameController/GCExtendedGamepad.h>
+#import <GameController/GCGamepad.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated"
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
 
 @interface AppController ()
 - (void)axisSnappingChanged:(id)sender;
@@ -14,6 +23,8 @@
 - (void)joystickFloatingChanged:(id)sender;
 - (void)setTiltNeutral;
 @end
+
+#pragma clang diagnostic pop
 
 #define ACCELEROMETER_UPDATE_RATE 1.0 / 30.0
 
@@ -32,15 +43,28 @@
 
 AppController *gApp;
 
+static UIInterfaceOrientation BSRemoteCurrentInterfaceOrientation(
+    UIViewController *viewController) {
+  if (@available(iOS 13.0, *)) {
+    UIWindowScene *windowScene = viewController.view.window.windowScene;
+    if (windowScene != nil) {
+      return windowScene.interfaceOrientation;
+    }
+  }
+  return [UIApplication sharedApplication].statusBarOrientation;
+}
+
 - (void)_showAlert:(NSString *)title {
-  UIAlertView *alertView =
-      [[UIAlertView alloc] initWithTitle:title
-                                 message:@"Check your networking configuration."
-                                delegate:self
-                       cancelButtonTitle:@"OK"
-                       otherButtonTitles:nil];
-  [alertView show];
-  [alertView release];
+  UIAlertController *alertController = [UIAlertController
+      alertControllerWithTitle:title
+                       message:@"Check your networking configuration."
+                preferredStyle:UIAlertControllerStyleAlert];
+  [alertController addAction:[UIAlertAction actionWithTitle:@"OK"
+                                                      style:UIAlertActionStyleCancel
+                                                    handler:nil]];
+  [self.navController presentViewController:alertController
+                                   animated:YES
+                                 completion:nil];
 }
 
 + (AppController *)sharedApp {
@@ -151,7 +175,7 @@ AppController *gApp;
   // (we dont really use this, but it looks prettier than ambiguous flashing or
   // whatnot)
   if (controller.playerIndex == GCControllerPlayerIndexUnset) {
-    controller.playerIndex = 0;
+    controller.playerIndex = GCControllerPlayerIndex1;
   }
 
   // if they have the extended profile:
@@ -404,23 +428,6 @@ AppController *gApp;
     [_hoverView addSubview:sf];
   }
 
-  if (0) {
-    l = [[UILabel alloc] initWithFrame:CGRectMake(0, 175, 300, 20)];
-    l.textColor = [UIColor whiteColor];
-    l.backgroundColor = [UIColor clearColor];
-    l.text = [NSString stringWithFormat:@"Axis Snapping:"];
-    [_hoverView addSubview:l];
-    UISwitch *s = [[[UISwitch alloc]
-        initWithFrame:CGRectMake(100, 205, 100, 30)] autorelease];
-    [s addTarget:self
-                  action:@selector(axisSnappingChanged:)
-        forControlEvents:UIControlEventValueChanged];
-    s.on = [defaults objectForKey:@"axisSnapping"] == nil
-               ? NO
-               : [defaults boolForKey:@"axisSnapping"];
-    [_hoverView addSubview:s];
-  }
-
   if (1) {
     UIButton *b = [UIButton buttonWithType:UIButtonTypeRoundedRect];
     [b addTarget:self
@@ -462,7 +469,7 @@ AppController *gApp;
   if (haveControllers) {
     l = [[UILabel alloc] initWithFrame:CGRectMake(0, 185, 300, 20)];
     l.textColor = [UIColor whiteColor];
-    l.textAlignment = UITextAlignmentCenter;
+    l.textAlignment = NSTextAlignmentCenter;
     l.backgroundColor = [UIColor clearColor];
     l.text = [NSString stringWithFormat:@"Controller DPad Sensitivity:"];
     [_hoverView addSubview:l];
@@ -506,7 +513,7 @@ AppController *gApp;
 - (void)setTiltNeutral {
 
   float tiltY, tiltZ;
-  switch (self.navController.interfaceOrientation) {
+  switch (BSRemoteCurrentInterfaceOrientation(self.navController)) {
   case UIInterfaceOrientationPortrait:
     tiltY = _accelY;
     tiltZ = _accelZ;

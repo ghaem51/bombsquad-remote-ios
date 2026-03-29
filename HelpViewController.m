@@ -2,6 +2,13 @@
 
 @implementation HelpViewController
 
+static UIInterfaceOrientationMask BSRemoteSupportedOrientations(void) {
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    return UIInterfaceOrientationMaskAll;
+  }
+  return UIInterfaceOrientationMaskLandscape;
+}
+
 - (id)initWithNibName:(NSString *)nibNameOrNil
                bundle:(NSBundle *)nibBundleOrNil {
   self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
@@ -15,7 +22,7 @@
 }
 
 - (IBAction)closePressed:(id)caller {
-  [self dismissModalViewControllerAnimated:YES];
+  [self dismissViewControllerAnimated:YES completion:nil];
 }
 
 - (void)didReceiveMemoryWarning {
@@ -39,22 +46,19 @@
   }
 }
 
-- (void)viewDidUnload {
-  [super viewDidUnload];
-  // Release any retained subviews of the main view.
-  // e.g. self.myOutlet = nil;
+- (BOOL)shouldAutorotate {
+  return YES;
 }
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:
-    (UIInterfaceOrientation)interfaceOrientationIn {
-  // iPad works any which way.. iPhone only landscape
-  // FIXME - can't we just specify this in the info.plist?
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+  return BSRemoteSupportedOrientations();
+}
+
+- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation {
   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-    return YES;
-  } else {
-    return (interfaceOrientationIn == UIInterfaceOrientationLandscapeLeft ||
-            interfaceOrientationIn == UIInterfaceOrientationLandscapeRight);
+    return UIInterfaceOrientationPortrait;
   }
+  return UIInterfaceOrientationLandscapeRight;
 }
 
 @end

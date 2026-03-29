@@ -3,8 +3,8 @@
 @interface NSTimer (Utils)
 + (NSTimer *)scheduledTimerWithTimeInterval:(NSTimeInterval)seconds
                                     repeats:(BOOL)repeats
-                                 usingBlock:(void (^)())fireBlock;
+                                 usingBlock:(void (^)(void))fireBlock;
 + (NSTimer *)timerWithTimeInterval:(NSTimeInterval)seconds
                            repeats:(BOOL)repeats
-                        usingBlock:(void (^)())fireBlock;
+                        usingBlock:(void (^)(void))fireBlock;
 @end

@@ -9,7 +9,7 @@ typedef void (^PSYTimerBlock)(NSTimer *);
 @implementation NSTimer (Utils)
 + (NSTimer *)scheduledTimerWithTimeInterval:(NSTimeInterval)seconds
                                     repeats:(BOOL)repeats
-                                 usingBlock:(void (^)())fireBlock {
+                                 usingBlock:(void (^)(void))fireBlock {
   return [self scheduledTimerWithTimeInterval:seconds
                                        target:self
                                      selector:@selector
@@ -20,7 +20,7 @@ typedef void (^PSYTimerBlock)(NSTimer *);
 
 + (NSTimer *)timerWithTimeInterval:(NSTimeInterval)seconds
                            repeats:(BOOL)repeats
-                        usingBlock:(void (^)())fireBlock {
+                        usingBlock:(void (^)(void))fireBlock {
   return [self
       timerWithTimeInterval:seconds
                      target:self

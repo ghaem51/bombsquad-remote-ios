@@ -11,9 +11,19 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 #define kProgressIndicatorSize 20.0
 
 using namespace std;
+
+static UIInterfaceOrientationMask BSRemoteSupportedOrientations(void) {
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    return UIInterfaceOrientationMaskAll;
+  }
+  return UIInterfaceOrientationMaskLandscape;
+}
 
 @interface BrowserViewController ()
 @property(nonatomic, assign, readwrite) BOOL needsActivityIndicator;
@@ -437,7 +447,8 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
             0) {
           return;
         }
-        for (p = res; p != NULL; p = p->ai_next) {
+        p = res;
+        if (p != NULL) {
           void *addr;
           const char *ipver;
           // get the pointer to the address itself,
@@ -461,7 +472,6 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
           [[AppController sharedApp] browserViewController:self
                                           didSelectAddress:p->ai_addr
                                                   withSize:p->ai_addrlen];
-          break; // only do first
         }
 
         freeaddrinfo(res); // free the linked list
@@ -475,7 +485,8 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
       [[[HelpViewController alloc] initWithNibName:@"HelpViewController"
                                             bundle:nil] autorelease];
   vc.modalTransitionStyle = UIModalTransitionStyleFlipHorizontal;
-  [self presentModalViewController:vc animated:YES];
+  vc.modalPresentationStyle = UIModalPresentationFullScreen;
+  [self presentViewController:vc animated:YES completion:nil];
 }
 
 - (void)showPrefs {
@@ -579,7 +590,7 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault
                                    reuseIdentifier:tableCellIdentifier]
         autorelease];
-    cell.textLabel.textAlignment = UITextAlignmentCenter;
+    cell.textLabel.textAlignment = NSTextAlignmentCenter;
     cell.backgroundColor = [UIColor clearColor];
   }
 
@@ -684,7 +695,6 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   if (_scanSocket4 != NULL) {
     struct ifaddrs *ifaddr;
     if (getifaddrs(&ifaddr) != -1) {
-      int i = 0;
       for (ifaddrs *ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr == NULL) {
           NSLog(@"Got null ifa_addr; odd.");
@@ -715,7 +725,6 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
             }
           }
         }
-        i++;
       }
       freeifaddrs(ifaddr);
     }
@@ -735,8 +744,8 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     int success = inet_pton(AF_INET6, "FF02::1", &addr6.sin6_addr) == 1;
     assert(success);
     UInt8 data[1] = {BS_REMOTE_MSG_GAME_QUERY};
-    long bytesSent = sendto(_scanSocket6Raw, data, 1, 0,
-                            (struct sockaddr *)&addr6, sizeof(addr6));
+    sendto(_scanSocket6Raw, data, 1, 0, (struct sockaddr *)&addr6,
+           sizeof(addr6));
   }
 
   // remove games from our list that we havn't heard from in a while
@@ -771,15 +780,19 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   }
 }
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:
-    (UIInterfaceOrientation)interfaceOrientationIn {
-  // iPad works any which way.. iPhone only landscape
+- (BOOL)shouldAutorotate {
+  return YES;
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+  return BSRemoteSupportedOrientations();
+}
+
+- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation {
   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-    return YES;
-  } else {
-    return (interfaceOrientationIn == UIInterfaceOrientationLandscapeLeft ||
-            interfaceOrientationIn == UIInterfaceOrientationLandscapeRight);
+    return UIInterfaceOrientationPortrait;
   }
+  return UIInterfaceOrientationLandscapeRight;
 }
 
 - (void)dealloc {
@@ -792,3 +805,5 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 }
 
 @end
+
+#pragma clang diagnostic pop
