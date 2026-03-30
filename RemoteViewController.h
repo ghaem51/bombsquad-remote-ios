@@ -54,6 +54,12 @@ enum BSRemoteMsg {
   BOOL _run2Pressed;
   BOOL _run3Pressed;
   BOOL _run4Pressed;
+  BOOL _runTouchPressed;
+  BOOL _runButtonEnabled;
+  BOOL _layoutEditing;
+  UITouch *_layoutEditTouch;
+  UIView *_layoutEditTarget;
+  CGPoint _layoutEditTouchOffset;
 
   CFSocketRef _cfSocket4;
   CFSocketRef _cfSocket6;
@@ -105,6 +111,9 @@ enum BSRemoteMsg {
 - (id)initWithAddress:(struct sockaddr*)a andSize:(int)s;
 - (void)tiltModeChanged:(NSNumber *)enabled;
 - (void)controllerDPadSensitivityChanged:(float)value;
+- (void)runButtonEnabledChanged:(NSNumber *)enabled;
+- (void)beginLayoutEditing;
+- (void)resetSavedLayout;
 
 - (void)joystickFloatingChanged:(NSNumber *)enabled;
 - (void)tiltNeutralChangedToY:(float)y z:(float)z;
@@ -151,6 +160,9 @@ enum BSRemoteMsg {
 @property(nonatomic, retain) UIImageView *buttonImageThrowPressed;
 @property(nonatomic, retain) UIImageView *buttonImageBomb;
 @property(nonatomic, retain) UIImageView *buttonImageBombPressed;
+@property(nonatomic, retain) UIButton *runButton;
+@property(nonatomic, retain) HoverView *layoutEditPanel;
+@property(nonatomic, retain) UILabel *layoutEditLabel;
 //@property (nonatomic, retain) UIImageView *dPadBackingImage;
 @property(nonatomic, retain) UIView *dPadBacking;
 

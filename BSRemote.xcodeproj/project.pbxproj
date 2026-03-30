@@ -58,6 +58,10 @@
 		57F51B9812EC16FB00B63B25 /* buttonMenu@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 57F51B9412EC16FB00B63B25 /* buttonMenu@2x.png */; };
 		57F51BB112EC1A7B00B63B25 /* buttonOptions.png in Resources */ = {isa = PBXBuildFile; fileRef = 57F51BAF12EC1A7B00B63B25 /* buttonOptions.png */; };
 		57F51BB212EC1A7B00B63B25 /* buttonOptions@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 57F51BB012EC1A7B00B63B25 /* buttonOptions@2x.png */; };
+		6E0F2C502F7B3B37007DC7DE /* buttonRun.png in Resources */ = {isa = PBXBuildFile; fileRef = 6E0F2C4E2F7B3B37007DC7DE /* buttonRun.png */; };
+		6E0F2C522F7B3F1D007DC7DE /* buttonRun@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6E0F2C532F7B3F1D007DC7DE /* buttonRun@2x.png */; };
+		6E0F2C512F7B3B37007DC7DE /* buttonRunPress.png in Resources */ = {isa = PBXBuildFile; fileRef = 6E0F2C4F2F7B3B37007DC7DE /* buttonRunPress.png */; };
+		6E0F2C542F7B4185007DC7DE /* buttonRunPress@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6E0F2C552F7B4185007DC7DE /* buttonRunPress@2x.png */; };
 		57F51BC312EC1CD300B63B25 /* thumb.png in Resources */ = {isa = PBXBuildFile; fileRef = 57F51BC112EC1CD300B63B25 /* thumb.png */; };
 		57F51BC412EC1CD300B63B25 /* thumb@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 57F51BC212EC1CD300B63B25 /* thumb@2x.png */; };
 		57F51BE012EC1DB300B63B25 /* center.png in Resources */ = {isa = PBXBuildFile; fileRef = 57F51BDE12EC1DB300B63B25 /* center.png */; };
@@ -130,6 +134,10 @@
 		57F51B9412EC16FB00B63B25 /* buttonMenu@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "buttonMenu@2x.png"; path = "Resources/Images/buttonMenu@2x.png"; sourceTree = "<group>"; };
 		57F51BAF12EC1A7B00B63B25 /* buttonOptions.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = buttonOptions.png; path = Resources/Images/buttonOptions.png; sourceTree = "<group>"; };
 		57F51BB012EC1A7B00B63B25 /* buttonOptions@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "buttonOptions@2x.png"; path = "Resources/Images/buttonOptions@2x.png"; sourceTree = "<group>"; };
+		6E0F2C4E2F7B3B37007DC7DE /* buttonRun.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = buttonRun.png; path = Resources/Images/buttonRun.png; sourceTree = "<group>"; };
+		6E0F2C532F7B3F1D007DC7DE /* buttonRun@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "buttonRun@2x.png"; path = "Resources/Images/buttonRun@2x.png"; sourceTree = "<group>"; };
+		6E0F2C4F2F7B3B37007DC7DE /* buttonRunPress.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = buttonRunPress.png; path = Resources/Images/buttonRunPress.png; sourceTree = "<group>"; };
+		6E0F2C552F7B4185007DC7DE /* buttonRunPress@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "buttonRunPress@2x.png"; path = "Resources/Images/buttonRunPress@2x.png"; sourceTree = "<group>"; };
 		57F51BC112EC1CD300B63B25 /* thumb.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = thumb.png; path = Resources/Images/thumb.png; sourceTree = "<group>"; };
 		57F51BC212EC1CD300B63B25 /* thumb@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "thumb@2x.png"; path = "Resources/Images/thumb@2x.png"; sourceTree = "<group>"; };
 		57F51BDE12EC1DB300B63B25 /* center.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = center.png; path = Resources/Images/center.png; sourceTree = "<group>"; };
@@ -205,6 +213,10 @@
 				57F51B9412EC16FB00B63B25 /* buttonMenu@2x.png */,
 				57F51BAF12EC1A7B00B63B25 /* buttonOptions.png */,
 				57F51BB012EC1A7B00B63B25 /* buttonOptions@2x.png */,
+				6E0F2C4E2F7B3B37007DC7DE /* buttonRun.png */,
+				6E0F2C532F7B3F1D007DC7DE /* buttonRun@2x.png */,
+				6E0F2C4F2F7B3B37007DC7DE /* buttonRunPress.png */,
+				6E0F2C552F7B4185007DC7DE /* buttonRunPress@2x.png */,
 				57F51AF412EC02C800B63B25 /* buttonPunch.png */,
 				57F51AF512EC02C800B63B25 /* buttonPunch@2x.png */,
 				57F51AF612EC02C800B63B25 /* buttonPunchPressed.png */,
@@ -299,23 +311,24 @@
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				BuildIndependentTargetsInParallel = NO;
 				LastUpgradeCheck = 1010;
 				TargetAttributes = {
 					1D6058900D05DD3D006BFB54 = {
-						DevelopmentTeam = G7TQB7SM63;
+						DevelopmentTeam = QGQD65PY86;
+						LastSwiftMigration = 2630;
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
 			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "BSRemote" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			developmentRegion = en;
 			hasScannedForEncodings = 1;
 			knownRegions = (
-				English,
-				Japanese,
-				French,
-				German,
+				en,
+				ja,
+				fr,
+				de,
 			);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* CustomTemplate */;
 			projectDirPath = "";
@@ -360,6 +373,10 @@
 				57F51B9812EC16FB00B63B25 /* buttonMenu@2x.png in Resources */,
 				57F51BB112EC1A7B00B63B25 /* buttonOptions.png in Resources */,
 				57F51BB212EC1A7B00B63B25 /* buttonOptions@2x.png in Resources */,
+				6E0F2C502F7B3B37007DC7DE /* buttonRun.png in Resources */,
+				6E0F2C522F7B3F1D007DC7DE /* buttonRun@2x.png in Resources */,
+				6E0F2C512F7B3B37007DC7DE /* buttonRunPress.png in Resources */,
+				6E0F2C542F7B4185007DC7DE /* buttonRunPress@2x.png in Resources */,
 				57F51BC312EC1CD300B63B25 /* thumb.png in Resources */,
 				57F51BC412EC1CD300B63B25 /* thumb@2x.png in Resources */,
 				57F51BE012EC1DB300B63B25 /* center.png in Resources */,
@@ -405,18 +422,20 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = QGQD65PY86;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = Prefix.pch;
 				GCC_THUMB_SUPPORT = NO;
 				INFOPLIST_FILE = Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				OTHER_CFLAGS = "-DDEBUG=1";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-framework",
@@ -426,9 +445,12 @@
 					"-framework",
 					CoreServices,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = net.froemling.bsremote;
+				PRODUCT_BUNDLE_IDENTIFIER = net.froemling.bsremote.ghaem;
 				PRODUCT_NAME = BSRemote;
 				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				WARNING_CFLAGS = "-Wall";
 			};
@@ -439,16 +461,18 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = QGQD65PY86;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = Prefix.pch;
 				GCC_THUMB_SUPPORT = NO;
 				INFOPLIST_FILE = Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-framework",
 					CFNetwork,
@@ -457,9 +481,11 @@
 					"-framework",
 					CoreServices,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = net.froemling.bsremote;
+				PRODUCT_BUNDLE_IDENTIFIER = net.froemling.bsremote.ghaem;
 				PRODUCT_NAME = BSRemote;
 				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				WARNING_CFLAGS = "-Wall";
 			};
@@ -505,16 +531,18 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = QGQD65PY86;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = Prefix.pch;
 				GCC_THUMB_SUPPORT = NO;
 				INFOPLIST_FILE = Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-framework",
 					CFNetwork,
@@ -523,9 +551,11 @@
 					"-framework",
 					CoreServices,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = net.froemling.bsremote;
+				PRODUCT_BUNDLE_IDENTIFIER = net.froemling.bsremote.ghaem;
 				PRODUCT_NAME = BSRemote;
 				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				WARNING_CFLAGS = "-Wall";
 			};

@@ -31,6 +31,20 @@ static UIInterfaceOrientation BSRemoteCurrentInterfaceOrientation(
   return [UIApplication sharedApplication].statusBarOrientation;
 }
 
+static BOOL BSRemoteRunButtonEnabledForDefaults(NSUserDefaults *defaults) {
+  return [defaults objectForKey:@"runButtonEnabled"] == nil
+             ? YES
+             : [defaults boolForKey:@"runButtonEnabled"];
+}
+
+static CGRect BSRemoteScaledRunButtonFrame(CGRect frame) {
+  const CGFloat scale = 2.0f;
+  return CGRectMake(frame.origin.x, frame.origin.y, frame.size.width * scale,
+                    frame.size.height * scale);
+}
+
+static NSString *const BSRemoteControlLayoutDefaultsKey = @"controlLayoutPositions";
+
 RemoteViewController *gRemoteViewController = nil;
 
 #define BS_REMOTE_PROTOCOL_VERSION 121
@@ -92,6 +106,20 @@ enum BSRemoteState2 {
        andDirect:(BOOL)direct;
 - (void)updateButtonsForTouches;
 - (void)updateDPadBase;
+- (void)applyButtonLayout;
+- (void)applySavedControlLayout;
+- (void)resetControlsToDefaultLayout;
+- (void)saveCurrentControlLayout;
+- (UIView *)editableControlAtPoint:(CGPoint)point;
+- (void)setFaceButton:(UIImageView *)button
+         pressedImage:(UIImageView *)pressedImage
+               center:(CGPoint)center;
+- (CGPoint)faceButtonCenterForImage:(UIImageView *)image;
+- (void)finishLayoutEditing;
+- (void)updateRunState;
+- (void)updateRunButtonVisualState;
+- (void)handleRunTouchPress;
+- (void)handleRunTouchRelease;
 - (void)axisSnappingChanged:(NSNumber *)enabled;
 - (void)showPrefs;
 - (void)showActivityIndicator;
@@ -109,6 +137,9 @@ enum BSRemoteState2 {
 @synthesize buttonImageJumpPressed = _buttonImageJumpPressed;
 @synthesize buttonImageBomb = _buttonImageBomb;
 @synthesize buttonImageBombPressed = _buttonImageBombPressed;
+@synthesize runButton = _runButton;
+@synthesize layoutEditPanel = _layoutEditPanel;
+@synthesize layoutEditLabel = _layoutEditLabel;
 @synthesize dPadBacking = _dPadBacking;
 @synthesize dPadThumbImage = _dPadThumbImage;
 @synthesize dPadThumbPressedImage = _dPadThumbPressedImage;
@@ -151,6 +182,7 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   _floating = [defaults objectForKey:@"joystickFloating"] == nil
                   ? YES
                   : [defaults boolForKey:@"joystickFloating"];
+  _runButtonEnabled = BSRemoteRunButtonEnabledForDefaults(defaults);
 
   _controllerDPadSensitivity =
       [defaults objectForKey:@"controllerDPadSensitivity"] == nil
@@ -901,68 +933,82 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   self.buttonImageBombPressed.hidden = YES;
 }
 
-- (void)handleRun1Press {
-  _run1Pressed = true;
-  if (_run1Pressed || _run2Pressed || _run3Pressed || _run4Pressed) {
+- (void)updateRunState {
+  if (_run1Pressed || _run2Pressed || _run3Pressed || _run4Pressed ||
+      _runTouchPressed) {
     _buttonStateV2 |= BS_REMOTE_STATE2_RUN;
+  } else {
+    _buttonStateV2 &= ~BS_REMOTE_STATE2_RUN;
   }
   [self doStateChangeForced:NO];
+}
+
+- (void)updateRunButtonVisualState {
+  if (self.runButton == nil) {
+    return;
+  }
+  self.runButton.highlighted = _runTouchPressed;
+  self.runButton.alpha = _runButtonEnabled ? 1.0 : 0.0;
+  self.runButton.hidden = !_runButtonEnabled;
+  self.runButton.userInteractionEnabled = _runButtonEnabled && !_layoutEditing;
+}
+
+- (void)handleRunTouchPress {
+  if (!_runButtonEnabled || _runTouchPressed) {
+    return;
+  }
+  _runTouchPressed = YES;
+  [self updateRunState];
+  [self updateRunButtonVisualState];
+}
+
+- (void)handleRunTouchRelease {
+  if (!_runTouchPressed) {
+    return;
+  }
+  _runTouchPressed = NO;
+  [self updateRunState];
+  [self updateRunButtonVisualState];
+}
+
+- (void)handleRun1Press {
+  _run1Pressed = true;
+  [self updateRunState];
 }
 
 - (void)handleRun1Release {
   _run1Pressed = false;
-  if (!_run1Pressed and !_run2Pressed and !_run3Pressed and !_run4Pressed) {
-    _buttonStateV2 &= ~BS_REMOTE_STATE2_RUN;
-  }
-  [self doStateChangeForced:NO];
+  [self updateRunState];
 }
 
 - (void)handleRun2Press {
   _run2Pressed = true;
-  if (_run1Pressed || _run2Pressed || _run3Pressed || _run4Pressed) {
-    _buttonStateV2 |= BS_REMOTE_STATE2_RUN;
-  }
-  [self doStateChangeForced:NO];
+  [self updateRunState];
 }
 
 - (void)handleRun2Release {
   _run2Pressed = false;
-  if (!_run1Pressed and !_run2Pressed and !_run3Pressed and !_run4Pressed) {
-    _buttonStateV2 &= ~BS_REMOTE_STATE2_RUN;
-  }
-  [self doStateChangeForced:NO];
+  [self updateRunState];
 }
 
 - (void)handleRun3Press {
   _run3Pressed = true;
-  if (_run1Pressed || _run2Pressed || _run3Pressed || _run4Pressed) {
-    _buttonStateV2 |= BS_REMOTE_STATE2_RUN;
-  }
-  [self doStateChangeForced:NO];
+  [self updateRunState];
 }
 
 - (void)handleRun3Release {
   _run3Pressed = false;
-  if (!_run1Pressed and !_run2Pressed and !_run3Pressed and !_run4Pressed) {
-    _buttonStateV2 &= ~BS_REMOTE_STATE2_RUN;
-  }
-  [self doStateChangeForced:NO];
+  [self updateRunState];
 }
 
 - (void)handleRun4Press {
   _run4Pressed = true;
-  if (_run1Pressed || _run2Pressed || _run3Pressed || _run4Pressed) {
-    _buttonStateV2 |= BS_REMOTE_STATE2_RUN;
-  }
-  [self doStateChangeForced:NO];
+  [self updateRunState];
 }
 
 - (void)handleRun4Release {
   _run4Pressed = false;
-  if (!_run1Pressed and !_run2Pressed and !_run3Pressed and !_run4Pressed) {
-    _buttonStateV2 &= ~BS_REMOTE_STATE2_RUN;
-  }
-  [self doStateChangeForced:NO];
+  [self updateRunState];
 }
 
 - (void)handleMenu {
@@ -973,6 +1019,252 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   _buttonStateV1 &= ~BS_REMOTE_STATE_MENU;
   _buttonStateV2 &= ~BS_REMOTE_STATE2_MENU;
   [self doStateChangeForced:NO];
+}
+
+- (void)applyButtonLayout {
+  if (self.buttonBacking == nil) {
+    return;
+  }
+
+  CGFloat width = self.view.bounds.size.width;
+  CGFloat height = self.view.bounds.size.height;
+  CGFloat centerX = width - 110.0f;
+  CGFloat centerY = UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad
+                        ? height / 2.0f - 20.0f
+                        : height * 0.65f - 20.0f;
+  CGFloat offs = 73.0f;
+
+  [self setFaceButton:self.buttonImagePunch
+         pressedImage:self.buttonImagePunchPressed
+               center:CGPointMake(centerX - offs, centerY)];
+  [self setFaceButton:self.buttonImageJump
+         pressedImage:self.buttonImageJumpPressed
+               center:CGPointMake(centerX, centerY + offs)];
+  [self setFaceButton:self.buttonImageThrow
+         pressedImage:self.buttonImageThrowPressed
+               center:CGPointMake(centerX, centerY - offs)];
+  [self setFaceButton:self.buttonImageBomb
+         pressedImage:self.buttonImageBombPressed
+               center:CGPointMake(centerX + offs, centerY)];
+}
+
+- (void)setFaceButton:(UIImageView *)button
+         pressedImage:(UIImageView *)pressedImage
+               center:(CGPoint)center {
+  CGPoint localCenter = [self.buttonBacking convertPoint:center fromView:self.view];
+  CGRect frame = button.frame;
+  frame.origin.x = localCenter.x - frame.size.width / 2.0f;
+  frame.origin.y = localCenter.y - frame.size.height / 2.0f;
+  button.frame = frame;
+  pressedImage.frame = frame;
+}
+
+- (CGPoint)faceButtonCenterForImage:(UIImageView *)image {
+  CGPoint localCenter =
+      CGPointMake(CGRectGetMidX(image.frame), CGRectGetMidY(image.frame));
+  return [self.buttonBacking convertPoint:localCenter toView:self.view];
+}
+
+- (void)resetControlsToDefaultLayout {
+  CGFloat width = self.view.bounds.size.width;
+  CGFloat height = self.view.bounds.size.height;
+  CGFloat leftInset = 0.0f;
+  CGFloat bottomInset = 0.0f;
+
+  if (@available(iOS 11.0, *)) {
+    leftInset = UIApplication.sharedApplication.keyWindow.safeAreaInsets.left;
+    bottomInset = UIApplication.sharedApplication.keyWindow.safeAreaInsets.bottom;
+  }
+
+  CGRect dPadFrame;
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    dPadFrame = CGRectMake(0, height / 2 - 120, 200, 200);
+  } else if (@available(iOS 11.0, *)) {
+    dPadFrame = CGRectMake(leftInset * 2, height * 0.65 - 120, 200, 200);
+  } else {
+    dPadFrame = CGRectMake(0, height * 0.65 - 120, 200, 200);
+  }
+  self.dPadBacking.frame = dPadFrame;
+
+  self.buttonBacking.frame = self.view.bounds;
+
+  CGRect runFrame;
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    runFrame = CGRectMake(width / 2.0 - 120.0, height - 166.0, 240.0, 112.0);
+  } else if (@available(iOS 11.0, *)) {
+    runFrame = CGRectMake(width / 2.0 - 88.0, height - 114.0, 176.0, 84.0);
+  } else {
+    runFrame = CGRectMake(width / 2.0 - 88.0, height - 100.0, 176.0, 84.0);
+  }
+  if (bottomInset > 0.0f) {
+    runFrame.origin.y -= bottomInset;
+  }
+  self.runButton.frame = runFrame;
+
+  [self applyButtonLayout];
+  [self updateDPadBase];
+}
+
+- (void)applySavedControlLayout {
+  [self resetControlsToDefaultLayout];
+
+  NSDictionary *layout =
+      [[NSUserDefaults standardUserDefaults] dictionaryForKey:BSRemoteControlLayoutDefaultsKey];
+  if (layout == nil) {
+    return;
+  }
+
+  NSArray *dPadCenter = [layout objectForKey:@"dPadCenter"];
+  if ([dPadCenter count] == 2) {
+    CGPoint center = CGPointMake([[dPadCenter objectAtIndex:0] floatValue] *
+                                     self.view.bounds.size.width,
+                                 [[dPadCenter objectAtIndex:1] floatValue] *
+                                     self.view.bounds.size.height);
+    self.dPadBacking.center = center;
+  }
+
+  NSArray *punchCenter = [layout objectForKey:@"punchCenter"];
+  if ([punchCenter count] == 2) {
+    [self setFaceButton:self.buttonImagePunch
+           pressedImage:self.buttonImagePunchPressed
+                 center:CGPointMake([[punchCenter objectAtIndex:0] floatValue] *
+                                        self.view.bounds.size.width,
+                                    [[punchCenter objectAtIndex:1] floatValue] *
+                                        self.view.bounds.size.height)];
+  }
+
+  NSArray *jumpCenter = [layout objectForKey:@"jumpCenter"];
+  if ([jumpCenter count] == 2) {
+    [self setFaceButton:self.buttonImageJump
+           pressedImage:self.buttonImageJumpPressed
+                 center:CGPointMake([[jumpCenter objectAtIndex:0] floatValue] *
+                                        self.view.bounds.size.width,
+                                    [[jumpCenter objectAtIndex:1] floatValue] *
+                                        self.view.bounds.size.height)];
+  }
+
+  NSArray *throwCenter = [layout objectForKey:@"throwCenter"];
+  if ([throwCenter count] == 2) {
+    [self setFaceButton:self.buttonImageThrow
+           pressedImage:self.buttonImageThrowPressed
+                 center:CGPointMake([[throwCenter objectAtIndex:0] floatValue] *
+                                        self.view.bounds.size.width,
+                                    [[throwCenter objectAtIndex:1] floatValue] *
+                                        self.view.bounds.size.height)];
+  }
+
+  NSArray *bombCenter = [layout objectForKey:@"bombCenter"];
+  if ([bombCenter count] == 2) {
+    [self setFaceButton:self.buttonImageBomb
+           pressedImage:self.buttonImageBombPressed
+                 center:CGPointMake([[bombCenter objectAtIndex:0] floatValue] *
+                                        self.view.bounds.size.width,
+                                    [[bombCenter objectAtIndex:1] floatValue] *
+                                        self.view.bounds.size.height)];
+  }
+
+  NSArray *runCenter = [layout objectForKey:@"runCenter"];
+  if ([runCenter count] == 2) {
+    CGPoint center = CGPointMake([[runCenter objectAtIndex:0] floatValue] *
+                                     self.view.bounds.size.width,
+                                 [[runCenter objectAtIndex:1] floatValue] *
+                                     self.view.bounds.size.height);
+    self.runButton.center = center;
+  }
+
+  [self updateDPadBase];
+}
+
+- (void)saveCurrentControlLayout {
+  NSDictionary *layout = [NSDictionary
+      dictionaryWithObjectsAndKeys:
+          [NSArray arrayWithObjects:
+                       [NSNumber numberWithFloat:self.dPadBacking.center.x /
+                                                     self.view.bounds.size.width],
+                       [NSNumber numberWithFloat:self.dPadBacking.center.y /
+                                                     self.view.bounds.size.height],
+                       nil],
+          @"dPadCenter",
+          [NSArray arrayWithObjects:
+                       [NSNumber numberWithFloat:[self faceButtonCenterForImage:self.buttonImagePunch].x /
+                                                     self.view.bounds.size.width],
+                       [NSNumber numberWithFloat:[self faceButtonCenterForImage:self.buttonImagePunch].y /
+                                                     self.view.bounds.size.height],
+                       nil],
+          @"punchCenter",
+          [NSArray arrayWithObjects:
+                       [NSNumber numberWithFloat:[self faceButtonCenterForImage:self.buttonImageJump].x /
+                                                     self.view.bounds.size.width],
+                       [NSNumber numberWithFloat:[self faceButtonCenterForImage:self.buttonImageJump].y /
+                                                     self.view.bounds.size.height],
+                       nil],
+          @"jumpCenter",
+          [NSArray arrayWithObjects:
+                       [NSNumber numberWithFloat:[self faceButtonCenterForImage:self.buttonImageThrow].x /
+                                                     self.view.bounds.size.width],
+                       [NSNumber numberWithFloat:[self faceButtonCenterForImage:self.buttonImageThrow].y /
+                                                     self.view.bounds.size.height],
+                       nil],
+          @"throwCenter",
+          [NSArray arrayWithObjects:
+                       [NSNumber numberWithFloat:[self faceButtonCenterForImage:self.buttonImageBomb].x /
+                                                     self.view.bounds.size.width],
+                       [NSNumber numberWithFloat:[self faceButtonCenterForImage:self.buttonImageBomb].y /
+                                                     self.view.bounds.size.height],
+                       nil],
+          @"bombCenter",
+          [NSArray arrayWithObjects:
+                       [NSNumber numberWithFloat:self.runButton.center.x /
+                                                     self.view.bounds.size.width],
+                       [NSNumber numberWithFloat:self.runButton.center.y /
+                                                     self.view.bounds.size.height],
+                       nil],
+          @"runCenter",
+          nil];
+  [[NSUserDefaults standardUserDefaults] setObject:layout
+                                            forKey:BSRemoteControlLayoutDefaultsKey];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
+- (UIView *)editableControlAtPoint:(CGPoint)point {
+  if (_runButtonEnabled && CGRectContainsPoint(self.runButton.frame, point)) {
+    return self.runButton;
+  }
+  CGRect punchFrame = [self.buttonBacking convertRect:self.buttonImagePunch.frame
+                                               toView:self.view];
+  CGRect jumpFrame = [self.buttonBacking convertRect:self.buttonImageJump.frame
+                                              toView:self.view];
+  CGRect throwFrame = [self.buttonBacking convertRect:self.buttonImageThrow.frame
+                                               toView:self.view];
+  CGRect bombFrame = [self.buttonBacking convertRect:self.buttonImageBomb.frame
+                                              toView:self.view];
+  if (CGRectContainsPoint(punchFrame, point)) {
+    return self.buttonImagePunch;
+  }
+  if (CGRectContainsPoint(jumpFrame, point)) {
+    return self.buttonImageJump;
+  }
+  if (CGRectContainsPoint(throwFrame, point)) {
+    return self.buttonImageThrow;
+  }
+  if (CGRectContainsPoint(bombFrame, point)) {
+    return self.buttonImageBomb;
+  }
+  if (CGRectContainsPoint(self.dPadBacking.frame, point)) {
+    return self.dPadBacking;
+  }
+  return nil;
+}
+
+- (void)finishLayoutEditing {
+  _layoutEditing = NO;
+  _layoutEditTouch = nil;
+  _layoutEditTarget = nil;
+  self.runButton.userInteractionEnabled = _runButtonEnabled;
+  [self.layoutEditPanel removeFromSuperview];
+  self.layoutEditPanel = nil;
+  self.layoutEditLabel = nil;
+  [self saveCurrentControlLayout];
 }
 
 - (void)viewDidLoad {
@@ -992,7 +1284,10 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   UIImageView *i;
   CGRect f;
 
-  self.buttonBacking = [[[UIView alloc] init] autorelease];
+  self.buttonBacking = [[[UIView alloc] initWithFrame:self.view.bounds] autorelease];
+  _buttonBacking.autoresizingMask = UIViewAutoresizingFlexibleWidth |
+                                    UIViewAutoresizingFlexibleHeight;
+  _buttonBacking.userInteractionEnabled = NO;
   self.buttonImagePunch = [[[UIImageView alloc]
       initWithImage:[UIImage imageNamed:@"buttonPunch.png"]] autorelease];
   self.buttonImagePunchPressed = [[[UIImageView alloc]
@@ -1126,42 +1421,18 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   // buttons
   {
 
-    CGRect fBase;
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-      fBase = CGRectMake(width - 210, height / 2 - 120, 200, 200);
-    } else {
-      fBase = CGRectMake(width - 210, height * 0.65 - 120, 200, 200);
-    }
-
     UIView *v = self.buttonBacking;
-
-    // backing
-    v.frame = fBase;
-    v.autoresizingMask = UIViewAutoresizingFlexibleTopMargin |
-                         UIViewAutoresizingFlexibleLeftMargin |
-                         UIViewAutoresizingFlexibleBottomMargin;
     [self.view addSubview:v];
 
-    float offset = 0.73f;
-    float buttonSize = 160.0f;
-
-    float offs = fBase.size.width * 0.5f * offset;
-    float ins = (fBase.size.width - buttonSize) * 0.5f;
-
     i = self.buttonImagePunch;
-    f = fBase;
-    f = CGRectOffset(f, -offs, 0);
-    f = CGRectInset(f, ins, ins);
-    f.origin.x -= _buttonBacking.frame.origin.x;
-    f.origin.y -= _buttonBacking.frame.origin.y;
-    i.frame = f;
+    i.frame = CGRectMake(0, 0, i.image.size.width, i.image.size.height);
     i.autoresizingMask = UIViewAutoresizingFlexibleTopMargin |
                          UIViewAutoresizingFlexibleLeftMargin |
                          UIViewAutoresizingFlexibleBottomMargin;
     [_buttonBacking addSubview:i];
 
     i = self.buttonImagePunchPressed;
-    i.frame = f;
+    i.frame = self.buttonImagePunch.frame;
     i.hidden = YES;
     i.autoresizingMask = UIViewAutoresizingFlexibleTopMargin |
                          UIViewAutoresizingFlexibleLeftMargin |
@@ -1169,19 +1440,14 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     [_buttonBacking addSubview:i];
 
     i = self.buttonImageJump;
-    f = fBase;
-    f = CGRectOffset(f, 0, offs);
-    f = CGRectInset(f, ins, ins);
-    f.origin.x -= _buttonBacking.frame.origin.x;
-    f.origin.y -= _buttonBacking.frame.origin.y;
-    i.frame = f;
+    i.frame = CGRectMake(0, 0, i.image.size.width, i.image.size.height);
     i.autoresizingMask = UIViewAutoresizingFlexibleTopMargin |
                          UIViewAutoresizingFlexibleLeftMargin |
                          UIViewAutoresizingFlexibleBottomMargin;
     [_buttonBacking addSubview:i];
 
     i = self.buttonImageJumpPressed;
-    i.frame = f;
+    i.frame = self.buttonImageJump.frame;
     i.hidden = YES;
     i.autoresizingMask = UIViewAutoresizingFlexibleTopMargin |
                          UIViewAutoresizingFlexibleLeftMargin |
@@ -1189,19 +1455,14 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     [_buttonBacking addSubview:i];
 
     i = self.buttonImageThrow;
-    f = fBase;
-    f = CGRectOffset(f, 0, -offs);
-    f = CGRectInset(f, ins, ins);
-    f.origin.x -= _buttonBacking.frame.origin.x;
-    f.origin.y -= _buttonBacking.frame.origin.y;
-    i.frame = f;
+    i.frame = CGRectMake(0, 0, i.image.size.width, i.image.size.height);
     i.autoresizingMask = UIViewAutoresizingFlexibleTopMargin |
                          UIViewAutoresizingFlexibleLeftMargin |
                          UIViewAutoresizingFlexibleBottomMargin;
     [_buttonBacking addSubview:i];
 
     i = self.buttonImageThrowPressed;
-    i.frame = f;
+    i.frame = self.buttonImageThrow.frame;
     i.hidden = YES;
     i.autoresizingMask = UIViewAutoresizingFlexibleTopMargin |
                          UIViewAutoresizingFlexibleLeftMargin |
@@ -1209,25 +1470,54 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     [_buttonBacking addSubview:i];
 
     i = self.buttonImageBomb;
-    f = fBase;
-    f = CGRectOffset(f, offs, 0);
-    f = CGRectInset(f, ins, ins);
-    f.origin.x -= _buttonBacking.frame.origin.x;
-    f.origin.y -= _buttonBacking.frame.origin.y;
-    i.frame = f;
+    i.frame = CGRectMake(0, 0, i.image.size.width, i.image.size.height);
     i.autoresizingMask = UIViewAutoresizingFlexibleTopMargin |
                          UIViewAutoresizingFlexibleLeftMargin |
                          UIViewAutoresizingFlexibleBottomMargin;
     [_buttonBacking addSubview:i];
 
     i = self.buttonImageBombPressed;
-    i.frame = f;
+    i.frame = self.buttonImageBomb.frame;
     i.hidden = YES;
     i.autoresizingMask = UIViewAutoresizingFlexibleTopMargin |
                          UIViewAutoresizingFlexibleLeftMargin |
                          UIViewAutoresizingFlexibleBottomMargin;
     [_buttonBacking addSubview:i];
+
+    [self applyButtonLayout];
   }
+
+  // run button
+  b = [UIButton buttonWithType:UIButtonTypeCustom];
+  self.runButton = b;
+  UIImage *runImage = [UIImage imageNamed:@"buttonRun.png"];
+  UIImage *runPressedImage = [UIImage imageNamed:@"buttonRunPress.png"];
+  [b setBackgroundImage:runImage forState:UIControlStateNormal];
+  [b setBackgroundImage:runPressedImage forState:UIControlStateHighlighted];
+  [b setBackgroundImage:runPressedImage forState:UIControlStateSelected];
+
+  if (runImage != nil) {
+    b.frame = BSRemoteScaledRunButtonFrame(
+        CGRectMake(0, 0, runImage.size.width, runImage.size.height));
+  } else {
+    b.frame = BSRemoteScaledRunButtonFrame(CGRectMake(0, 0, 88.0, 42.0));
+  }
+  b.autoresizingMask = UIViewAutoresizingFlexibleTopMargin |
+                       UIViewAutoresizingFlexibleLeftMargin |
+                       UIViewAutoresizingFlexibleRightMargin;
+  [b addTarget:self
+                action:@selector(handleRunTouchPress)
+      forControlEvents:UIControlEventTouchDown |
+                       UIControlEventTouchDragEnter];
+  [b addTarget:self
+                action:@selector(handleRunTouchRelease)
+      forControlEvents:UIControlEventTouchUpInside |
+                       UIControlEventTouchUpOutside |
+                       UIControlEventTouchCancel |
+                       UIControlEventTouchDragExit];
+  [self updateRunButtonVisualState];
+  [self.view addSubview:b];
+  [self applySavedControlLayout];
 
   // options button
   b = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -1399,6 +1689,10 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 }
 
 - (void)showPrefs {
+  if (_layoutEditing) {
+    [self finishLayoutEditing];
+    return;
+  }
   [[AppController sharedApp] showPrefsWithDelegate:self];
 }
 
@@ -1413,6 +1707,75 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 
 - (void)controllerDPadSensitivityChanged:(float)value {
   _controllerDPadSensitivity = value;
+}
+
+- (void)runButtonEnabledChanged:(NSNumber *)enabled {
+  _runButtonEnabled = [enabled boolValue];
+  if (!_runButtonEnabled) {
+    [self handleRunTouchRelease];
+  }
+  [self updateRunButtonVisualState];
+}
+
+- (void)beginLayoutEditing {
+  if (_layoutEditing) {
+    return;
+  }
+
+  [self handleRunTouchRelease];
+  _layoutEditing = YES;
+  _layoutEditTouch = nil;
+  _layoutEditTarget = nil;
+  self.runButton.userInteractionEnabled = NO;
+
+  HoverView *panel = [[[HoverView alloc] initWithFrame:CGRectZero] autorelease];
+  panel.frame = UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad
+                    ? CGRectMake(self.view.bounds.size.width / 2.0 - 150.0, 20.0,
+                                 300.0, 100.0)
+                    : CGRectMake(self.view.bounds.size.width / 2.0 - 135.0, 14.0,
+                                 270.0, 88.0);
+  panel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin |
+                           UIViewAutoresizingFlexibleRightMargin |
+                           UIViewAutoresizingFlexibleBottomMargin;
+  self.layoutEditPanel = panel;
+
+  UILabel *label = [[[UILabel alloc] initWithFrame:CGRectMake(15.0, 12.0,
+                                                              panel.bounds.size.width - 30.0,
+                                                              36.0)] autorelease];
+  label.backgroundColor = [UIColor clearColor];
+  label.textColor = [UIColor whiteColor];
+  label.textAlignment = NSTextAlignmentCenter;
+  label.numberOfLines = 2;
+  label.font = [UIFont boldSystemFontOfSize:14.0];
+  label.text = @"Drag d-pad, run, or any action button.\nTap Done to save.";
+  self.layoutEditLabel = label;
+  [panel addSubview:label];
+
+  UIButton *doneButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+  doneButton.frame = CGRectMake(panel.bounds.size.width / 2.0 - 95.0,
+                                panel.bounds.size.height - 42.0, 90.0, 30.0);
+  [doneButton setTitle:@"Done" forState:UIControlStateNormal];
+  [doneButton addTarget:self
+                 action:@selector(finishLayoutEditing)
+       forControlEvents:UIControlEventTouchUpInside];
+  [panel addSubview:doneButton];
+
+  UIButton *resetButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+  resetButton.frame = CGRectMake(panel.bounds.size.width / 2.0 + 5.0,
+                                 panel.bounds.size.height - 42.0, 90.0, 30.0);
+  [resetButton setTitle:@"Reset" forState:UIControlStateNormal];
+  [resetButton addTarget:self
+                  action:@selector(resetSavedLayout)
+        forControlEvents:UIControlEventTouchUpInside];
+  [panel addSubview:resetButton];
+
+  [self.view addSubview:panel];
+}
+
+- (void)resetSavedLayout {
+  [[NSUserDefaults standardUserDefaults] removeObjectForKey:BSRemoteControlLayoutDefaultsKey];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+  [self resetControlsToDefaultLayout];
 }
 
 - (void)tiltModeChanged:(NSNumber *)enabled {
@@ -1526,6 +1889,26 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 }
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
+  if (_layoutEditing) {
+    for (UITouch *touch in touches) {
+      CGPoint point = [touch locationInView:self.view];
+      UIView *target = [self editableControlAtPoint:point];
+      if (target != nil) {
+        _layoutEditTouch = touch;
+        _layoutEditTarget = target;
+        CGPoint targetCenter = (target == self.buttonImagePunch ||
+                                target == self.buttonImageJump ||
+                                target == self.buttonImageThrow ||
+                                target == self.buttonImageBomb)
+                                   ? [self faceButtonCenterForImage:(UIImageView *)target]
+                                   : target.center;
+        _layoutEditTouchOffset =
+            CGPointMake(point.x - targetCenter.x, point.y - targetCenter.y);
+        break;
+      }
+    }
+    return;
+  }
 
   for (UITouch *touch in touches) {
 
@@ -1744,13 +2127,11 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     if (touch == _dPadTouch)
       continue;
 
-    // get the touch in button-coords
-    // lets get a point in our button section normalized to -1-to-1 scale
-    CGPoint p = [self getPointInImageSpace:self.buttonBacking
-                                  forPoint:[touch locationInView:self.view]];
+    CGPoint p = [touch locationInView:self.view];
 
-    float threshold = 0.3;
-    CGPoint pb, pb2;
+    CGFloat threshold = CGRectGetWidth(self.buttonImagePunch.frame) * 0.3f;
+    CGFloat maxDistance = CGRectGetWidth(self.buttonImagePunch.frame) * BUTTON_BUFFER;
+    CGPoint pb;
     float xDiff, yDiff, len;
     float punchLen, jumpLen, throwLen, bombLen;
     UIImageView *img;
@@ -1760,13 +2141,9 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 
     // punch
     img = _buttonImagePunch;
-    pb.x = img.frame.origin.x + img.frame.size.width / 2.0;
-    pb.y = img.frame.origin.y + img.frame.size.height / 2.0;
-    pb.x += _buttonBacking.frame.origin.x;
-    pb.y += _buttonBacking.frame.origin.y;
-    pb2 = [self getPointInImageSpace:self.buttonBacking forPoint:pb];
-    xDiff = p.x - pb2.x;
-    yDiff = p.y - pb2.y;
+    pb = [self faceButtonCenterForImage:img];
+    xDiff = p.x - pb.x;
+    yDiff = p.y - pb.y;
     punchLen = len = sqrt(xDiff * xDiff + yDiff * yDiff);
     if (isMove && len < threshold) {
       punchHeld = YES;
@@ -1774,13 +2151,9 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 
     // throw
     img = _buttonImageThrow;
-    pb.x = img.frame.origin.x + img.frame.size.width / 2.0;
-    pb.y = img.frame.origin.y + img.frame.size.height / 2.0;
-    pb.x += _buttonBacking.frame.origin.x;
-    pb.y += _buttonBacking.frame.origin.y;
-    pb2 = [self getPointInImageSpace:self.buttonBacking forPoint:pb];
-    xDiff = p.x - pb2.x;
-    yDiff = p.y - pb2.y;
+    pb = [self faceButtonCenterForImage:img];
+    xDiff = p.x - pb.x;
+    yDiff = p.y - pb.y;
     throwLen = len = sqrt(xDiff * xDiff + yDiff * yDiff);
     if (isMove && len < threshold) {
       throwHeld = YES;
@@ -1788,13 +2161,9 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 
     // jump
     img = _buttonImageJump;
-    pb.x = img.frame.origin.x + img.frame.size.width / 2.0;
-    pb.y = img.frame.origin.y + img.frame.size.height / 2.0;
-    pb.x += _buttonBacking.frame.origin.x;
-    pb.y += _buttonBacking.frame.origin.y;
-    pb2 = [self getPointInImageSpace:self.buttonBacking forPoint:pb];
-    xDiff = p.x - pb2.x;
-    yDiff = p.y - pb2.y;
+    pb = [self faceButtonCenterForImage:img];
+    xDiff = p.x - pb.x;
+    yDiff = p.y - pb.y;
     jumpLen = len = sqrt(xDiff * xDiff + yDiff * yDiff);
     if (isMove && len < threshold) {
       jumpHeld = YES;
@@ -1802,13 +2171,9 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 
     // bomb
     img = _buttonImageBomb;
-    pb.x = img.frame.origin.x + img.frame.size.width / 2.0;
-    pb.y = img.frame.origin.y + img.frame.size.height / 2.0;
-    pb.x += _buttonBacking.frame.origin.x;
-    pb.y += _buttonBacking.frame.origin.y;
-    pb2 = [self getPointInImageSpace:self.buttonBacking forPoint:pb];
-    xDiff = p.x - pb2.x;
-    yDiff = p.y - pb2.y;
+    pb = [self faceButtonCenterForImage:img];
+    xDiff = p.x - pb.x;
+    yDiff = p.y - pb.y;
     bombLen = len = sqrt(xDiff * xDiff + yDiff * yDiff);
     if (isMove && len < threshold) {
       bombHeld = YES;
@@ -1818,8 +2183,8 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     // a touch in our button area should *always* affect at least one button
     // ..so lets find the closest button and press it.
     // this will probably coincide with what we just set above but thats ok.
-    if (p.x > -1.0 * BUTTON_BUFFER and p.x < 1.0 * BUTTON_BUFFER and
-        p.y > -1.0 * BUTTON_BUFFER and p.y < 1.0 * BUTTON_BUFFER) {
+    if (punchLen < maxDistance || throwLen < maxDistance || jumpLen < maxDistance ||
+        bombLen < maxDistance) {
 
       if (punchLen < throwLen and punchLen < jumpLen and punchLen < bombLen) {
         punchHeld = YES;
@@ -1875,6 +2240,44 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 }
 
 - (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
+  if (_layoutEditing) {
+    if (_layoutEditTouch != nil && [touches containsObject:_layoutEditTouch]) {
+      CGPoint point = [_layoutEditTouch locationInView:self.view];
+      UIView *target = _layoutEditTarget;
+      CGPoint center = CGPointMake(point.x - _layoutEditTouchOffset.x,
+                                   point.y - _layoutEditTouchOffset.y);
+      CGFloat halfWidth = target.bounds.size.width * 0.5f;
+      CGFloat halfHeight = target.bounds.size.height * 0.5f;
+      center.x = fmax(halfWidth, fmin(self.view.bounds.size.width - halfWidth,
+                                      center.x));
+      center.y = fmax(halfHeight, fmin(self.view.bounds.size.height - halfHeight,
+                                       center.y));
+      if (target == self.buttonImagePunch) {
+        [self setFaceButton:self.buttonImagePunch
+               pressedImage:self.buttonImagePunchPressed
+                     center:center];
+      } else if (target == self.buttonImageJump) {
+        [self setFaceButton:self.buttonImageJump
+               pressedImage:self.buttonImageJumpPressed
+                     center:center];
+      } else if (target == self.buttonImageThrow) {
+        [self setFaceButton:self.buttonImageThrow
+               pressedImage:self.buttonImageThrowPressed
+                     center:center];
+      } else if (target == self.buttonImageBomb) {
+        [self setFaceButton:self.buttonImageBomb
+               pressedImage:self.buttonImageBombPressed
+                     center:center];
+      } else {
+        target.center = center;
+      }
+      if (target == self.dPadBacking) {
+        [self updateDPadBase];
+      }
+    }
+    return;
+  }
+
   for (UITouch *touch in touches) {
 
     [self.validMovedTouches addObject:touch];
@@ -1931,6 +2334,13 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 }
 
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
+  if (_layoutEditing) {
+    if (_layoutEditTouch != nil && [touches containsObject:_layoutEditTouch]) {
+      _layoutEditTouch = nil;
+      _layoutEditTarget = nil;
+    }
+    return;
+  }
 
   // lets go through all active touches and see what buttons we're still
   // hitting.. cancel the ones that we aren't.
@@ -2031,12 +2441,6 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
 
 - (void)accelerometer:(UIAccelerometer *)accelerometer
         didAccelerate:(UIAcceleration *)acceleration {
-
-  // ignore these in non-tilt-modes
-  if (!_tiltMode) {
-    return;
-  }
-
   float rawX;
   float rawY;
   float rawZ;
@@ -2077,6 +2481,10 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
     angle += 2.0 * 3.141592;
   } else if (angle > 3.141592) {
     angle -= 2.0 * 3.141592;
+  }
+
+  if (!_tiltMode) {
+    return;
   }
 
   y = -angle * 0.7;
@@ -2130,6 +2538,9 @@ static void readCallback(CFSocketRef cfSocket, CFSocketCallBackType type,
   self.buttonImagePunchPressed = nil;
   self.buttonImageBomb = nil;
   self.buttonImageBombPressed = nil;
+  self.runButton = nil;
+  self.layoutEditPanel = nil;
+  self.layoutEditLabel = nil;
   self.dPadBacking = nil;
   self.dPadThumbImage = nil;
   self.dPadThumbPressedImage = nil;

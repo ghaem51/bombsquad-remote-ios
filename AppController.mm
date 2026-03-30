@@ -21,6 +21,11 @@
 - (void)axisSnappingChanged:(id)sender;
 - (void)tiltModeChanged:(id)sender;
 - (void)joystickFloatingChanged:(id)sender;
+- (void)runButtonEnabledChanged:(id)sender;
+- (void)editLayout;
+- (void)resetLayout;
+- (void)handleControllerFaceButtonAtPosition:(NSInteger)position
+                                     pressed:(BOOL)pressed;
 - (void)setTiltNeutral;
 @end
 
@@ -52,6 +57,19 @@ static UIInterfaceOrientation BSRemoteCurrentInterfaceOrientation(
     }
   }
   return [UIApplication sharedApplication].statusBarOrientation;
+}
+
+typedef NS_ENUM(NSInteger, BSRemoteControllerFaceButtonPosition) {
+  BSRemoteControllerFaceButtonPositionA,
+  BSRemoteControllerFaceButtonPositionB,
+  BSRemoteControllerFaceButtonPositionX,
+  BSRemoteControllerFaceButtonPositionY
+};
+
+static BOOL BSRemoteRunButtonEnabledForDefaults(NSUserDefaults *defaults) {
+  return [defaults objectForKey:@"runButtonEnabled"] == nil
+             ? YES
+             : [defaults boolForKey:@"runButtonEnabled"];
 }
 
 - (void)_showAlert:(NSString *)title {
@@ -192,34 +210,27 @@ static UIInterfaceOrientation BSRemoteCurrentInterfaceOrientation(
         };
     controller.extendedGamepad.buttonA.valueChangedHandler = ^(
         GCControllerButtonInput *button, float value, BOOL pressed) {
-      if (pressed) {
-        [[RemoteViewController sharedRemoteViewController] handleJumpPress];
-      } else {
-        [[RemoteViewController sharedRemoteViewController] handleJumpRelease];
-      }
+      [self handleControllerFaceButtonAtPosition:
+                BSRemoteControllerFaceButtonPositionA
+                                       pressed:pressed];
     };
     controller.extendedGamepad.buttonB.valueChangedHandler = ^(
         GCControllerButtonInput *button, float value, BOOL pressed) {
-      if (pressed)
-        [[RemoteViewController sharedRemoteViewController] handleBombPress];
-      else
-        [[RemoteViewController sharedRemoteViewController] handleBombRelease];
+      [self handleControllerFaceButtonAtPosition:
+                BSRemoteControllerFaceButtonPositionB
+                                       pressed:pressed];
     };
     controller.extendedGamepad.buttonX.valueChangedHandler = ^(
         GCControllerButtonInput *button, float value, BOOL pressed) {
-      if (pressed) {
-        [[RemoteViewController sharedRemoteViewController] handlePunchPress];
-      } else {
-        [[RemoteViewController sharedRemoteViewController] handlePunchRelease];
-      }
+      [self handleControllerFaceButtonAtPosition:
+                BSRemoteControllerFaceButtonPositionX
+                                       pressed:pressed];
     };
     controller.extendedGamepad.buttonY.valueChangedHandler = ^(
         GCControllerButtonInput *button, float value, BOOL pressed) {
-      if (pressed) {
-        [[RemoteViewController sharedRemoteViewController] handleThrowPress];
-      } else {
-        [[RemoteViewController sharedRemoteViewController] handleThrowRelease];
-      }
+      [self handleControllerFaceButtonAtPosition:
+                BSRemoteControllerFaceButtonPositionY
+                                       pressed:pressed];
     };
     controller.extendedGamepad.leftShoulder.valueChangedHandler = ^(
         GCControllerButtonInput *button, float value, BOOL pressed) {
@@ -270,35 +281,27 @@ static UIInterfaceOrientation BSRemoteCurrentInterfaceOrientation(
         };
     controller.gamepad.buttonA.valueChangedHandler = ^(
         GCControllerButtonInput *button, float value, BOOL pressed) {
-      if (pressed) {
-        [[RemoteViewController sharedRemoteViewController] handleJumpPress];
-      } else {
-        [[RemoteViewController sharedRemoteViewController] handleJumpRelease];
-      }
+      [self handleControllerFaceButtonAtPosition:
+                BSRemoteControllerFaceButtonPositionA
+                                       pressed:pressed];
     };
     controller.gamepad.buttonB.valueChangedHandler = ^(
         GCControllerButtonInput *button, float value, BOOL pressed) {
-      if (pressed) {
-        [[RemoteViewController sharedRemoteViewController] handleBombPress];
-      } else {
-        [[RemoteViewController sharedRemoteViewController] handleBombRelease];
-      }
+      [self handleControllerFaceButtonAtPosition:
+                BSRemoteControllerFaceButtonPositionB
+                                       pressed:pressed];
     };
     controller.gamepad.buttonX.valueChangedHandler = ^(
         GCControllerButtonInput *button, float value, BOOL pressed) {
-      if (pressed) {
-        [[RemoteViewController sharedRemoteViewController] handlePunchPress];
-      } else {
-        [[RemoteViewController sharedRemoteViewController] handlePunchRelease];
-      }
+      [self handleControllerFaceButtonAtPosition:
+                BSRemoteControllerFaceButtonPositionX
+                                       pressed:pressed];
     };
     controller.gamepad.buttonY.valueChangedHandler = ^(
         GCControllerButtonInput *button, float value, BOOL pressed) {
-      if (pressed) {
-        [[RemoteViewController sharedRemoteViewController] handleThrowPress];
-      } else {
-        [[RemoteViewController sharedRemoteViewController] handleThrowRelease];
-      }
+      [self handleControllerFaceButtonAtPosition:
+                BSRemoteControllerFaceButtonPositionY
+                                       pressed:pressed];
     };
     controller.gamepad.leftShoulder.valueChangedHandler = ^(
         GCControllerButtonInput *button, float value, BOOL pressed) {
@@ -321,6 +324,42 @@ static UIInterfaceOrientation BSRemoteCurrentInterfaceOrientation(
   controller.controllerPausedHandler = ^(GCController *controller) {
     [[RemoteViewController sharedRemoteViewController] handleMenu];
   };
+}
+
+- (void)handleControllerFaceButtonAtPosition:(NSInteger)position
+                                     pressed:(BOOL)pressed {
+  RemoteViewController *remote = [RemoteViewController sharedRemoteViewController];
+  if (remote == nil) {
+    return;
+  }
+
+  SEL pressSelector = nil;
+  SEL releaseSelector = nil;
+
+  switch (position) {
+  case BSRemoteControllerFaceButtonPositionA:
+    pressSelector = @selector(handleJumpPress);
+    releaseSelector = @selector(handleJumpRelease);
+    break;
+  case BSRemoteControllerFaceButtonPositionB:
+    pressSelector = @selector(handleBombPress);
+    releaseSelector = @selector(handleBombRelease);
+    break;
+  case BSRemoteControllerFaceButtonPositionX:
+    pressSelector = @selector(handlePunchPress);
+    releaseSelector = @selector(handlePunchRelease);
+    break;
+  case BSRemoteControllerFaceButtonPositionY:
+    pressSelector = @selector(handleThrowPress);
+    releaseSelector = @selector(handleThrowRelease);
+    break;
+  }
+
+  if (pressed) {
+    [remote performSelector:pressSelector];
+  } else {
+    [remote performSelector:releaseSelector];
+  }
 }
 
 - (void)removeController:(GCController *)controller {
@@ -369,17 +408,15 @@ static UIInterfaceOrientation BSRemoteCurrentInterfaceOrientation(
 
   if (haveControllers) {
     if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-      frame = CGRectMake(0, 0, 300, 290);
-    }
-    else {
-      frame = CGRectMake(0, 0, 300, 260);
+      frame = CGRectMake(0, 0, 300, 470);
+    } else {
+      frame = CGRectMake(0, 0, 300, 440);
     }
   } else {
     if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-      frame = CGRectMake(0, 0, 300, 230);
-    }
-    else {
-      frame = CGRectMake(0, 0, 300, 200);
+      frame = CGRectMake(0, 0, 300, 410);
+    } else {
+      frame = CGRectMake(0, 0, 300, 380);
     }
   }
   frame.origin.x =
@@ -402,6 +439,7 @@ static UIInterfaceOrientation BSRemoteCurrentInterfaceOrientation(
   BOOL joystickFloating = [defaults objectForKey:@"joystickFloating"] == nil
                               ? YES
                               : [defaults boolForKey:@"joystickFloating"];
+  BOOL runButtonEnabled = BSRemoteRunButtonEnabledForDefaults(defaults);
   float controllerDPadSensitivity =
       [defaults objectForKey:@"controllerDPadSensitivity"] == nil
           ? DEFAULT_CONTROLLER_DPAD_SENSITIVITY
@@ -466,15 +504,58 @@ static UIInterfaceOrientation BSRemoteCurrentInterfaceOrientation(
     [_hoverView addSubview:sf];
   }
 
-  if (haveControllers) {
+  {
     l = [[UILabel alloc] initWithFrame:CGRectMake(0, 185, 300, 20)];
+    l.textColor = [UIColor whiteColor];
+    l.textAlignment = NSTextAlignmentCenter;
+    l.backgroundColor = [UIColor clearColor];
+    l.text = @"Control Layout:";
+    [_hoverView addSubview:l];
+
+    UIButton *b = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    b.frame = CGRectMake(55, 215, 190, 34);
+    [b setTitle:@"Edit Positions" forState:UIControlStateNormal];
+    [b addTarget:self
+                  action:@selector(editLayout)
+        forControlEvents:UIControlEventTouchUpInside];
+    [_hoverView addSubview:b];
+
+    b = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    b.frame = CGRectMake(55, 255, 190, 34);
+    [b setTitle:@"Reset Positions" forState:UIControlStateNormal];
+    [b addTarget:self
+                  action:@selector(resetLayout)
+        forControlEvents:UIControlEventTouchUpInside];
+    [_hoverView addSubview:b];
+  }
+
+  {
+    l = [[UILabel alloc] initWithFrame:CGRectMake(35, 305, 170, 20)];
+    l.textColor = [UIColor whiteColor];
+    l.textAlignment = NSTextAlignmentLeft;
+    l.backgroundColor = [UIColor clearColor];
+    l.text = @"Show Run Button";
+    [_hoverView addSubview:l];
+
+    UISwitch *runSwitch = [[UISwitch alloc] initWithFrame:CGRectZero];
+    runSwitch.on = runButtonEnabled;
+    runSwitch.frame = CGRectMake(205, 298, runSwitch.frame.size.width,
+                                 runSwitch.frame.size.height);
+    [runSwitch addTarget:self
+                  action:@selector(runButtonEnabledChanged:)
+        forControlEvents:UIControlEventValueChanged];
+    [_hoverView addSubview:runSwitch];
+  }
+
+  if (haveControllers) {
+    l = [[UILabel alloc] initWithFrame:CGRectMake(0, 345, 300, 20)];
     l.textColor = [UIColor whiteColor];
     l.textAlignment = NSTextAlignmentCenter;
     l.backgroundColor = [UIColor clearColor];
     l.text = [NSString stringWithFormat:@"Controller DPad Sensitivity:"];
     [_hoverView addSubview:l];
 
-    _dPadSlider = [[UISlider alloc] initWithFrame:CGRectMake(50, 215, 200, 23)];
+    _dPadSlider = [[UISlider alloc] initWithFrame:CGRectMake(50, 375, 200, 23)];
     [_hoverView addSubview:_dPadSlider];
     _dPadSlider.minimumValue = 0.0;
     _dPadSlider.maximumValue = 1.0;
@@ -576,6 +657,25 @@ static UIInterfaceOrientation BSRemoteCurrentInterfaceOrientation(
   [[NSUserDefaults standardUserDefaults] synchronize];
   [[RemoteViewController sharedRemoteViewController]
       joystickFloatingChanged:[NSNumber numberWithInt:val]];
+}
+
+- (void)editLayout {
+  [self hidePrefs];
+  [[RemoteViewController sharedRemoteViewController] beginLayoutEditing];
+}
+
+- (void)resetLayout {
+  [[RemoteViewController sharedRemoteViewController] resetSavedLayout];
+}
+
+- (void)runButtonEnabledChanged:(id)caller {
+  BOOL val = ((UISwitch *)caller).on;
+  [[NSUserDefaults standardUserDefaults] setBool:val
+                                          forKey:@"runButtonEnabled"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+  if ([_prefsDelegate respondsToSelector:@selector(runButtonEnabledChanged:)]) {
+    [_prefsDelegate runButtonEnabledChanged:[NSNumber numberWithBool:val]];
+  }
 }
 
 - (void)axisSnappingChanged:(id)caller {
